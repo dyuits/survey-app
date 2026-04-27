@@ -62,6 +62,7 @@ function renderQuestions() {
       const choiceGrid = node.querySelector(".choice-grid");
 
       category.textContent = section.name;
+      category.classList.add(section.id === "ai" ? "category-ai" : section.id === "se" ? "category-se" : "category-default");
       number.textContent = `${questionNumber}번`;
       text.textContent = question.text;
 

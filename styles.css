@@ -188,9 +188,19 @@ h2 {
   padding: 4px 8px;
 }
 
+.pill.category-ai {
+  color: #1e3a8a;
+  background: rgba(59, 130, 246, 0.18);
+}
+
+.pill.category-se {
+  color: #9a3412;
+  background: rgba(251, 146, 60, 0.2);
+}
+
 .pill.number {
-  color: #ffffff;
-  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  color: #854d0e;
+  background: rgba(250, 204, 21, 0.3);
   font-weight: 800;
   letter-spacing: 0.2px;
 }
