@@ -188,6 +188,13 @@ h2 {
   padding: 4px 8px;
 }
 
+.pill.number {
+  color: #ffffff;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+
 .question-text {
   margin: 0 0 10px;
   line-height: 1.45;
