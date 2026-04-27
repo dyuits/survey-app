@@ -5,6 +5,8 @@ const loginButton = document.getElementById("loginButton");
 const loginMessage = document.getElementById("loginMessage");
 const statsContent = document.getElementById("statsContent");
 const clearAllButton = document.getElementById("clearAllButton");
+const chartTypeSelect = document.getElementById("chartTypeSelect");
+let chartType = "bar";
 
 function tryLogin() {
   const value = passwordInput.value.trim();
@@ -66,6 +68,11 @@ function renderStats() {
 
     const card = document.createElement("div");
     card.className = "stats-card";
+    const chartHtml =
+      chartType === "pie"
+        ? renderPieChart(stat)
+        : renderBarChart(stat);
+
     card.innerHTML = `
       <h3 class="stats-title">${role.name}</h3>
       <div class="stats-grid">
@@ -74,23 +81,7 @@ function renderStats() {
         <div class="kpi"><p class="kpi-label">${stat.labelB} 평균</p><p class="kpi-value">${stat.avgB.toFixed(2)} / 5</p></div>
       </div>
       <p class="subtext" style="margin-top:8px;">전체 평균: <strong>${stat.avgTotal.toFixed(2)} / 5</strong></p>
-      <div class="chart-block">
-        <div class="chart-row">
-          <p class="chart-label">${stat.labelA}</p>
-          <div class="chart-track"><div class="chart-bar" style="width:${(stat.avgA / 5) * 100}%"></div></div>
-          <p class="chart-value">${stat.avgA.toFixed(2)}</p>
-        </div>
-        <div class="chart-row">
-          <p class="chart-label">${stat.labelB}</p>
-          <div class="chart-track"><div class="chart-bar bar-alt" style="width:${(stat.avgB / 5) * 100}%"></div></div>
-          <p class="chart-value">${stat.avgB.toFixed(2)}</p>
-        </div>
-        <div class="chart-row">
-          <p class="chart-label">전체 평균</p>
-          <div class="chart-track"><div class="chart-bar bar-total" style="width:${(stat.avgTotal / 5) * 100}%"></div></div>
-          <p class="chart-value">${stat.avgTotal.toFixed(2)}</p>
-        </div>
-      </div>
+      ${chartHtml}
     `;
     statsContent.appendChild(card);
   });
@@ -115,6 +106,43 @@ function renderStats() {
   statsContent.appendChild(volumeCard);
 }
 
+function renderBarChart(stat) {
+  return `
+    <div class="chart-block">
+      <div class="chart-row">
+        <p class="chart-label">${stat.labelA}</p>
+        <div class="chart-track"><div class="chart-bar" style="width:${(stat.avgA / 5) * 100}%"></div></div>
+        <p class="chart-value">${stat.avgA.toFixed(2)}</p>
+      </div>
+      <div class="chart-row">
+        <p class="chart-label">${stat.labelB}</p>
+        <div class="chart-track"><div class="chart-bar bar-alt" style="width:${(stat.avgB / 5) * 100}%"></div></div>
+        <p class="chart-value">${stat.avgB.toFixed(2)}</p>
+      </div>
+      <div class="chart-row">
+        <p class="chart-label">전체 평균</p>
+        <div class="chart-track"><div class="chart-bar bar-total" style="width:${(stat.avgTotal / 5) * 100}%"></div></div>
+        <p class="chart-value">${stat.avgTotal.toFixed(2)}</p>
+      </div>
+    </div>
+  `;
+}
+
+function renderPieChart(stat) {
+  const total = stat.avgA + stat.avgB || 1;
+  const aPercent = (stat.avgA / total) * 100;
+  return `
+    <div class="pie-wrap">
+      <div class="pie-chart" style="background: conic-gradient(#2563eb 0% ${aPercent}%, #16a34a ${aPercent}% 100%);"></div>
+      <div class="pie-legend">
+        <p><span class="dot dot-a"></span>${stat.labelA}: ${stat.avgA.toFixed(2)}</p>
+        <p><span class="dot dot-b"></span>${stat.labelB}: ${stat.avgB.toFixed(2)}</p>
+        <p><span class="dot dot-c"></span>전체 평균: ${stat.avgTotal.toFixed(2)}</p>
+      </div>
+    </div>
+  `;
+}
+
 function clearAllStats() {
   if (!confirm("저장된 설문 결과를 모두 삭제할까요?")) return;
   saveResults([]);
@@ -126,3 +154,9 @@ passwordInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") tryLogin();
 });
 clearAllButton.addEventListener("click", clearAllStats);
+chartTypeSelect.addEventListener("change", () => {
+  chartType = chartTypeSelect.value;
+  if (!dashboardSection.classList.contains("hidden")) {
+    renderStats();
+  }
+});

@@ -27,8 +27,17 @@
       <section id="dashboardSection" class="card hidden">
         <div class="stats-head">
           <h2>통계</h2>
-          <button id="clearAllButton" class="danger" type="button">전체 통계 초기화</button>
+          <div class="admin-tools">
+            <select id="chartTypeSelect" class="chart-select">
+              <option value="bar">막대 그래프</option>
+              <option value="pie">원형 그래프</option>
+            </select>
+            <button id="clearAllButton" class="danger" type="button">전체 통계 초기화</button>
+          </div>
         </div>
+        <p class="subtext">
+          현재 버전은 브라우저 저장소 기반이라 같은 브라우저/기기에서 제출한 응답만 합산됩니다.
+        </p>
         <div id="statsContent"></div>
       </section>
     </main>

@@ -41,7 +41,13 @@ function renderQuestions() {
   roleConfig.categories.forEach((section, sectionIndex) => {
     const sectionTitle = document.createElement("h3");
     sectionTitle.className = "section-title";
-    sectionTitle.textContent = `${sectionIndex + 1}. ${section.name}`;
+    const sectionLabel =
+      section.id === "ai"
+        ? "AI 디지털 리터러시 역량"
+        : section.id === "se"
+          ? "사회정서 설문문항"
+          : section.name;
+    sectionTitle.textContent = `${sectionIndex + 1}. ${sectionLabel}`;
     surveyForm.appendChild(sectionTitle);
 
     section.questions.forEach((_, indexInSection) => {
