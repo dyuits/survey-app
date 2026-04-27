@@ -157,6 +157,16 @@ h2 {
   gap: 12px;
 }
 
+.section-title {
+  margin: 6px 0 2px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
 .question-card {
   border: 1px solid var(--line);
   border-radius: 12px;

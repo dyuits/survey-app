@@ -9,6 +9,7 @@ const CHOICES = [
 const roleId = document.body.dataset.role;
 const roleConfig = ROLE_CONFIG[roleId];
 const questions = getAllQuestions(roleId);
+const questionMap = new Map(questions.map((question) => [question.id, question]));
 const responses = {};
 
 const pageTitle = document.getElementById("pageTitle");
@@ -36,40 +37,52 @@ function initPage() {
 
 function renderQuestions() {
   surveyForm.innerHTML = "";
-  questions.forEach((question, index) => {
-    const node = questionTemplate.content.cloneNode(true);
-    const card = node.querySelector(".question-card");
-    const category = node.querySelector(".category");
-    const number = node.querySelector(".number");
-    const text = node.querySelector(".question-text");
-    const choiceGrid = node.querySelector(".choice-grid");
+  let questionNumber = 1;
+  roleConfig.categories.forEach((section, sectionIndex) => {
+    const sectionTitle = document.createElement("h3");
+    sectionTitle.className = "section-title";
+    sectionTitle.textContent = `${sectionIndex + 1}. ${section.name}`;
+    surveyForm.appendChild(sectionTitle);
 
-    category.textContent = question.categoryName;
-    number.textContent = `${index + 1}번`;
-    text.textContent = question.text;
+    section.questions.forEach((_, indexInSection) => {
+      const question = questionMap.get(`${section.id}-${indexInSection + 1}`);
+      if (!question) return;
 
-    CHOICES.forEach((choice) => {
-      const id = `${question.id}-${choice.value}`;
-      const label = document.createElement("label");
-      label.htmlFor = id;
-      label.textContent = `${choice.value}. ${choice.label}`;
+      const node = questionTemplate.content.cloneNode(true);
+      const card = node.querySelector(".question-card");
+      const category = node.querySelector(".category");
+      const number = node.querySelector(".number");
+      const text = node.querySelector(".question-text");
+      const choiceGrid = node.querySelector(".choice-grid");
 
-      const input = document.createElement("input");
-      input.type = "radio";
-      input.name = question.id;
-      input.id = id;
-      input.value = String(choice.value);
-      input.addEventListener("change", () => {
-        responses[question.id] = choice.value;
-        updateSelection(card, question.id);
-        updateProgress();
+      category.textContent = section.name;
+      number.textContent = `${questionNumber}번`;
+      text.textContent = question.text;
+
+      CHOICES.forEach((choice) => {
+        const id = `${question.id}-${choice.value}`;
+        const label = document.createElement("label");
+        label.htmlFor = id;
+        label.textContent = `${choice.value}. ${choice.label}`;
+
+        const input = document.createElement("input");
+        input.type = "radio";
+        input.name = question.id;
+        input.id = id;
+        input.value = String(choice.value);
+        input.addEventListener("change", () => {
+          responses[question.id] = choice.value;
+          updateSelection(card, question.id);
+          updateProgress();
+        });
+
+        label.appendChild(input);
+        choiceGrid.appendChild(label);
       });
 
-      label.appendChild(input);
-      choiceGrid.appendChild(label);
+      surveyForm.appendChild(node);
+      questionNumber += 1;
     });
-
-    surveyForm.appendChild(node);
   });
 }
 
