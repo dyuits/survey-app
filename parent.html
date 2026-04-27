@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>학부모용 설문</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body data-role="parent">
+    <main class="container">
+      <header class="hero">
+        <p class="school-title">제주중앙고등학교(2026학년도 연구학교 지정)</p>
+        <p class="badge">학부모용 배포 설문</p>
+        <h1 id="pageTitle"></h1>
+        <p id="pageIntro" class="subtext"></p>
+      </header>
+
+      <section class="card">
+        <p class="subtext" id="scaleLabel"></p>
+        <div class="progress-wrap">
+          <div class="progress-text">
+            <span id="progressText">0 / 24</span>
+            <span id="progressPercent">0%</span>
+          </div>
+          <div class="progress-track"><div id="progressBar" class="progress-bar"></div></div>
+        </div>
+      </section>
+
+      <form id="surveyForm" class="question-list card"></form>
+      <div class="actions">
+        <button id="submitButton" class="primary" type="button">설문 제출하기</button>
+        <button id="resetButton" class="ghost" type="button">다시 작성하기</button>
+      </div>
+    </main>
+
+    <template id="questionTemplate">
+      <article class="question-card">
+        <div class="question-meta">
+          <span class="pill category"></span>
+          <span class="pill number"></span>
+        </div>
+        <p class="question-text"></p>
+        <div class="choice-grid"></div>
+      </article>
+    </template>
+
+    <script src="data.js"></script>
+    <script src="survey.js"></script>
+  </body>
+</html>
