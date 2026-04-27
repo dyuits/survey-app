@@ -58,9 +58,11 @@ function renderStats() {
   totalBox.innerHTML = `<h3 class="stats-title">전체 제출 건수</h3><p class="kpi-value">${allResults.length}건</p>`;
   statsContent.appendChild(totalBox);
 
+  const roleStats = [];
   Object.keys(ROLE_CONFIG).forEach((roleId) => {
     const role = ROLE_CONFIG[roleId];
     const stat = makeRoleStats(roleId, allResults);
+    roleStats.push({ role, stat });
 
     const card = document.createElement("div");
     card.className = "stats-card";
@@ -72,9 +74,45 @@ function renderStats() {
         <div class="kpi"><p class="kpi-label">${stat.labelB} 평균</p><p class="kpi-value">${stat.avgB.toFixed(2)} / 5</p></div>
       </div>
       <p class="subtext" style="margin-top:8px;">전체 평균: <strong>${stat.avgTotal.toFixed(2)} / 5</strong></p>
+      <div class="chart-block">
+        <div class="chart-row">
+          <p class="chart-label">${stat.labelA}</p>
+          <div class="chart-track"><div class="chart-bar" style="width:${(stat.avgA / 5) * 100}%"></div></div>
+          <p class="chart-value">${stat.avgA.toFixed(2)}</p>
+        </div>
+        <div class="chart-row">
+          <p class="chart-label">${stat.labelB}</p>
+          <div class="chart-track"><div class="chart-bar bar-alt" style="width:${(stat.avgB / 5) * 100}%"></div></div>
+          <p class="chart-value">${stat.avgB.toFixed(2)}</p>
+        </div>
+        <div class="chart-row">
+          <p class="chart-label">전체 평균</p>
+          <div class="chart-track"><div class="chart-bar bar-total" style="width:${(stat.avgTotal / 5) * 100}%"></div></div>
+          <p class="chart-value">${stat.avgTotal.toFixed(2)}</p>
+        </div>
+      </div>
     `;
     statsContent.appendChild(card);
   });
+
+  const maxCount = Math.max(1, ...roleStats.map((item) => item.stat.count));
+  const volumeCard = document.createElement("div");
+  volumeCard.className = "stats-card";
+  volumeCard.innerHTML = `
+    <h3 class="stats-title">대상별 응답 건수 그래프</h3>
+    ${roleStats
+      .map(
+        (item) => `
+      <div class="chart-row">
+        <p class="chart-label">${item.role.name}</p>
+        <div class="chart-track"><div class="chart-bar bar-count" style="width:${(item.stat.count / maxCount) * 100}%"></div></div>
+        <p class="chart-value">${item.stat.count}건</p>
+      </div>
+    `
+      )
+      .join("")}
+  `;
+  statsContent.appendChild(volumeCard);
 }
 
 function clearAllStats() {
