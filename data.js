@@ -1,5 +1,9 @@
 const STORAGE_KEY = "school-survey-results-v2";
 const ADMIN_PASSWORD = "0001";
+const API_BASE =
+  (typeof window !== "undefined" && window.SURVEY_API_BASE) ||
+  (typeof localStorage !== "undefined" && localStorage.getItem("survey-api-base")) ||
+  "";
 
 const SCALE_LABEL = "리커트 5점 척도: 매우 그렇지 않다(1) ~ 매우 그렇다(5)";
 
@@ -163,4 +167,169 @@ function loadResults() {
 
 function saveResults(results) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(results));
+}
+
+function hasRemoteApi() {
+  return Boolean(API_BASE);
+}
+
+async function submitResult(payload) {
+  if (!hasRemoteApi()) {
+    const local = loadResults();
+    local.push(payload);
+    saveResults(local);
+    return false;
+  }
+  try {
+    const response = await fetch(`${API_BASE}/results`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) throw new Error("server submit failed");
+    return true;
+  } catch (error) {
+    const local = loadResults();
+    local.push(payload);
+    saveResults(local);
+    return false;
+  }
+}
+
+async function fetchResults() {
+  if (!hasRemoteApi()) return loadResults();
+  try {
+    const response = await fetch(`${API_BASE}/results`);
+    if (!response.ok) throw new Error("server fetch failed");
+    const rows = await response.json();
+    return Array.isArray(rows) ? rows : [];
+  } catch (error) {
+    return loadResults();
+  }
+}
+
+async function clearResults() {
+  if (!hasRemoteApi()) {
+    saveResults([]);
+    return false;
+  }
+  try {
+    const response = await fetch(`${API_BASE}/results`, {
+      method: "DELETE",
+    });
+    if (!response.ok) throw new Error("server delete failed");
+    saveResults([]);
+    return true;
+  } catch (error) {
+    saveResults([]);
+    return false;
+  }
+}
+
+function calcMean(values) {
+  if (!values.length) return 0;
+  const sum = values.reduce((acc, value) => acc + value, 0);
+  return sum / values.length;
+}
+
+function calcVariance(values) {
+  if (!values.length) return 0;
+  const mean = calcMean(values);
+  const sq = values.reduce((acc, value) => acc + (value - mean) ** 2, 0);
+  return sq / values.length;
+}
+
+function calcStdDev(values) {
+  return Math.sqrt(calcVariance(values));
+}
+
+function calcCronbachAlpha(entries, itemIds) {
+  if (entries.length < 2 || itemIds.length < 2) return 0;
+  const participantScores = entries.map((entry) =>
+    itemIds.map((id) => Number(entry.responses[id] || 0))
+  );
+  const totalScores = participantScores.map((row) => row.reduce((acc, value) => acc + value, 0));
+  const totalVariance = calcVariance(totalScores);
+  if (totalVariance === 0) return 0;
+  const itemVarianceSum = itemIds.reduce((acc, _, itemIndex) => {
+    const itemValues = participantScores.map((row) => row[itemIndex]);
+    return acc + calcVariance(itemValues);
+  }, 0);
+  const k = itemIds.length;
+  return (k / (k - 1)) * (1 - itemVarianceSum / totalVariance);
+}
+
+function interpretScore(score) {
+  if (score >= 4.2) return "매우 높음";
+  if (score >= 3.6) return "높음";
+  if (score >= 2.8) return "보통";
+  if (score >= 2.0) return "주의 필요";
+  return "개선 시급";
+}
+
+function buildInsights(stat) {
+  const balanceGap = Math.abs(stat.avgA - stat.avgB);
+  const consistency = stat.stdTotal <= 0.8 ? "응답 일관성 높음" : "응답 편차 큼";
+  return [
+    `${stat.labelA} 수준은 ${interpretScore(stat.avgA)} (${stat.avgA.toFixed(2)}점)`,
+    `${stat.labelB} 수준은 ${interpretScore(stat.avgB)} (${stat.avgB.toFixed(2)}점)`,
+    `영역 간 격차 ${balanceGap.toFixed(2)}점 (${balanceGap >= 0.6 ? "균형 개선 필요" : "균형 양호"})`,
+    `전체 표준편차 ${stat.stdTotal.toFixed(2)} (${consistency})`,
+    `신뢰도(Cronbach's alpha) ${stat.alphaTotal.toFixed(2)} (${stat.alphaTotal >= 0.7 ? "신뢰 가능" : "문항 점검 권장"})`,
+  ];
+}
+
+function valuesFromEntries(entries, itemIds) {
+  return entries.flatMap((entry) => itemIds.map((id) => Number(entry.responses[id] || 0)));
+}
+
+function makeRoleStats(roleId, allResults) {
+  const config = ROLE_CONFIG[roleId];
+  const items = allResults.filter((row) => row.role === roleId);
+  const categoryA = config.categories[0];
+  const categoryB = config.categories[1];
+  const idsA = categoryA.questions.map((_, i) => `${categoryA.id}-${i + 1}`);
+  const idsB = categoryB.questions.map((_, i) => `${categoryB.id}-${i + 1}`);
+  const totalIds = [...idsA, ...idsB];
+  const valuesA = valuesFromEntries(items, idsA);
+  const valuesB = valuesFromEntries(items, idsB);
+  const valuesTotal = valuesFromEntries(items, totalIds);
+  const stat = {
+    count: items.length,
+    avgA: calcMean(valuesA),
+    avgB: calcMean(valuesB),
+    avgTotal: calcMean(valuesTotal),
+    stdA: calcStdDev(valuesA),
+    stdB: calcStdDev(valuesB),
+    stdTotal: calcStdDev(valuesTotal),
+    varianceA: calcVariance(valuesA),
+    varianceB: calcVariance(valuesB),
+    varianceTotal: calcVariance(valuesTotal),
+    alphaA: calcCronbachAlpha(items, idsA),
+    alphaB: calcCronbachAlpha(items, idsB),
+    alphaTotal: calcCronbachAlpha(items, totalIds),
+    labelA: categoryA.name,
+    labelB: categoryB.name,
+  };
+  stat.insights = buildInsights(stat);
+  return stat;
+}
+
+function escapeCsvCell(value) {
+  const asText = String(value ?? "");
+  if (asText.includes(",") || asText.includes("\"") || asText.includes("\n")) {
+    return `"${asText.replace(/"/g, "\"\"")}"`;
+  }
+  return asText;
+}
+
+function exportResultsToCsv(rows) {
+  if (!rows.length) return "";
+  const questionIds = Object.keys(rows[0].responses || {});
+  const header = ["role", "submittedAt", ...questionIds];
+  const lines = rows.map((row) => {
+    const values = [row.role, row.submittedAt, ...questionIds.map((id) => row.responses[id] ?? "")];
+    return values.map(escapeCsvCell).join(",");
+  });
+  return [header.join(","), ...lines].join("\n");
 }
