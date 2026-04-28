@@ -9,7 +9,73 @@ const chartTypeSelect = document.getElementById("chartTypeSelect");
 const downloadCsvButton = document.getElementById("downloadCsvButton");
 const refreshStatsButton = document.getElementById("refreshStatsButton");
 const storageHint = document.getElementById("storageHint");
-let chartType = "bar";
+const SCALE_LABELS = ["매우 아니다", "아니다", "보통", "그렇다", "매우 그렇다"];
+const SCALE_COLORS = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#2563eb"];
+
+let currentAllResults = [];
+
+function showQuestionPopup(roleId, qIndex) {
+  const config = ROLE_CONFIG[roleId];
+  const items = currentAllResults.filter((row) => row.role === roleId);
+  let num = 0;
+  let targetQ = null;
+  for (const cat of config.categories) {
+    for (let i = 0; i < cat.questions.length; i++) {
+      if (num === qIndex) {
+        const qId = `${cat.id}-${i + 1}`;
+        const dist = [0, 0, 0, 0, 0];
+        items.forEach((e) => {
+          const v = Number(e.responses[qId] || 0);
+          if (v >= 1 && v <= 5) dist[v - 1]++;
+        });
+        targetQ = { num: num + 1, text: cat.questions[i], dist, total: items.length, categoryName: cat.name };
+        break;
+      }
+      num++;
+    }
+    if (targetQ) break;
+  }
+  if (!targetQ) return;
+
+  const existing = document.getElementById("questionPopup");
+  if (existing) existing.remove();
+
+  const overlay = document.createElement("div");
+  overlay.id = "questionPopup";
+  overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px;";
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.remove(); });
+
+  const maxCount = Math.max(1, ...targetQ.dist);
+  const barsHtml = SCALE_LABELS.map((label, idx) => {
+    const count = targetQ.dist[idx];
+    const pct = targetQ.total > 0 ? Math.round(count / targetQ.total * 100) : 0;
+    const barWidth = Math.round(count / maxCount * 100);
+    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <span style="min-width:90px;font-size:14px;text-align:right;">${label}</span>
+      <div style="flex:1;background:#e5e7eb;border-radius:6px;height:28px;overflow:hidden;">
+        <div style="width:${barWidth}%;height:100%;background:${SCALE_COLORS[idx]};border-radius:6px;transition:width 0.3s;"></div>
+      </div>
+      <span style="min-width:70px;font-size:14px;">${count}명 (${pct}%)</span>
+    </div>`;
+  }).join("");
+
+  const popup = document.createElement("div");
+  popup.style.cssText = "background:#fff;border-radius:12px;padding:24px;max-width:500px;width:100%;box-shadow:0 8px 30px rgba(0,0,0,0.2);";
+  popup.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:12px;">
+      <div>
+        <span style="font-size:12px;color:#6b7280;">${targetQ.categoryName}</span>
+        <h3 style="margin:4px 0 0;font-size:16px;">${targetQ.num}번. ${targetQ.text}</h3>
+      </div>
+      <button id="popupClose" style="background:none;border:none;font-size:24px;cursor:pointer;color:#9ca3af;padding:0 4px;">&times;</button>
+    </div>
+    <p style="font-size:13px;color:#6b7280;margin-bottom:12px;">응답 ${targetQ.total}건</p>
+    ${barsHtml}
+  `;
+  overlay.appendChild(popup);
+  document.body.appendChild(overlay);
+  popup.querySelector("#popupClose").addEventListener("click", () => overlay.remove());
+}
 
 function setStorageHintText() {
   if (!storageHint) return;
@@ -67,7 +133,12 @@ function makeRoleStats(roleId, allResults) {
     cat.questions.forEach((text, i) => {
       const qId = `${cat.id}-${i + 1}`;
       const avg = calcQuestionAvg(items, qId);
-      questionStats.push({ num, text, avg, categoryName: cat.name, categoryId: cat.id });
+      const dist = [0, 0, 0, 0, 0];
+      items.forEach((e) => {
+        const v = Number(e.responses[qId] || 0);
+        if (v >= 1 && v <= 5) dist[v - 1]++;
+      });
+      questionStats.push({ num, text, avg, categoryName: cat.name, categoryId: cat.id, qId, dist, total: items.length });
       num++;
     });
   });
@@ -83,7 +154,10 @@ function makeRoleStats(roleId, allResults) {
   };
 }
 
+let chartType = "bar";
+
 function paintStats(allResults) {
+  currentAllResults = allResults;
   statsContent.innerHTML = "";
 
   const totalBox = document.createElement("div");
@@ -115,11 +189,11 @@ function paintStats(allResults) {
       ${chartHtml}
       <h4 style="margin-top:16px;margin-bottom:8px;">문항별 통계</h4>
       <div class="chart-block">
-        ${stat.questionStats.map((q) => {
+        ${stat.questionStats.map((q, qi) => {
           const pct = Math.round(q.avg / 5 * 100);
           const barClass = q.categoryId === "ai" ? "chart-bar" : "chart-bar bar-alt";
           return `<div class="chart-row">
-            <p class="chart-label" style="min-width:40px;">${q.num}번</p>
+            <p class="chart-label q-btn" style="min-width:40px;cursor:pointer;color:#2563eb;text-decoration:underline;" data-role="${roleId}" data-qi="${qi}">${q.num}번</p>
             <div class="chart-track"><div class="${barClass}" style="width:${pct}%"></div></div>
             <p class="chart-value">${pct}%</p>
           </div>`;
@@ -147,6 +221,12 @@ function paintStats(allResults) {
       .join("")}
   `;
   statsContent.appendChild(volumeCard);
+
+  statsContent.querySelectorAll(".q-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      showQuestionPopup(btn.dataset.role, Number(btn.dataset.qi));
+    });
+  });
 }
 
 async function renderStats() {
