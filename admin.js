@@ -45,6 +45,13 @@ function calcAverage(entries, questionIds) {
   return count === 0 ? 0 : sum / count;
 }
 
+function calcQuestionAvg(entries, qId) {
+  if (entries.length === 0) return 0;
+  let sum = 0;
+  entries.forEach((e) => { sum += Number(e.responses[qId] || 0); });
+  return sum / entries.length;
+}
+
 function makeRoleStats(roleId, allResults) {
   const config = ROLE_CONFIG[roleId];
   const items = allResults.filter((row) => row.role === roleId);
@@ -53,6 +60,18 @@ function makeRoleStats(roleId, allResults) {
   const idsA = categoryA.questions.map((_, i) => `${categoryA.id}-${i + 1}`);
   const idsB = categoryB.questions.map((_, i) => `${categoryB.id}-${i + 1}`);
   const totalIds = [...idsA, ...idsB];
+
+  const questionStats = [];
+  let num = 1;
+  config.categories.forEach((cat) => {
+    cat.questions.forEach((text, i) => {
+      const qId = `${cat.id}-${i + 1}`;
+      const avg = calcQuestionAvg(items, qId);
+      questionStats.push({ num, text, avg, categoryName: cat.name, categoryId: cat.id });
+      num++;
+    });
+  });
+
   return {
     count: items.length,
     avgA: calcAverage(items, idsA),
@@ -60,6 +79,7 @@ function makeRoleStats(roleId, allResults) {
     avgTotal: calcAverage(items, totalIds),
     labelA: categoryA.name,
     labelB: categoryB.name,
+    questionStats,
   };
 }
 
@@ -93,6 +113,18 @@ function paintStats(allResults) {
       </div>
       <p class="subtext" style="margin-top:8px;">전체 평균: <strong>${Math.round(stat.avgTotal / 5 * 100)}%</strong></p>
       ${chartHtml}
+      <h4 style="margin-top:16px;margin-bottom:8px;">문항별 통계</h4>
+      <div class="chart-block">
+        ${stat.questionStats.map((q) => {
+          const pct = Math.round(q.avg / 5 * 100);
+          const barClass = q.categoryId === "ai" ? "chart-bar" : "chart-bar bar-alt";
+          return `<div class="chart-row">
+            <p class="chart-label" style="min-width:40px;">${q.num}번</p>
+            <div class="chart-track"><div class="${barClass}" style="width:${pct}%"></div></div>
+            <p class="chart-value">${pct}%</p>
+          </div>`;
+        }).join("")}
+      </div>
     `;
     statsContent.appendChild(card);
   });
