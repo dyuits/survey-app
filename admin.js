@@ -88,10 +88,10 @@ function paintStats(allResults) {
       <h3 class="stats-title">${role.name}</h3>
       <div class="stats-grid">
         <div class="kpi"><p class="kpi-label">응답 건수</p><p class="kpi-value">${stat.count}건</p></div>
-        <div class="kpi"><p class="kpi-label">${stat.labelA} 평균</p><p class="kpi-value">${stat.avgA.toFixed(2)} / 5</p></div>
-        <div class="kpi"><p class="kpi-label">${stat.labelB} 평균</p><p class="kpi-value">${stat.avgB.toFixed(2)} / 5</p></div>
+        <div class="kpi"><p class="kpi-label">${stat.labelA} 평균</p><p class="kpi-value">${Math.round(stat.avgA / 5 * 100)}%</p></div>
+        <div class="kpi"><p class="kpi-label">${stat.labelB} 평균</p><p class="kpi-value">${Math.round(stat.avgB / 5 * 100)}%</p></div>
       </div>
-      <p class="subtext" style="margin-top:8px;">전체 평균: <strong>${stat.avgTotal.toFixed(2)} / 5</strong></p>
+      <p class="subtext" style="margin-top:8px;">전체 평균: <strong>${Math.round(stat.avgTotal / 5 * 100)}%</strong></p>
       ${chartHtml}
     `;
     statsContent.appendChild(card);
@@ -136,17 +136,17 @@ function renderBarChart(stat) {
       <div class="chart-row">
         <p class="chart-label">${stat.labelA}</p>
         <div class="chart-track"><div class="chart-bar" style="width:${(stat.avgA / 5) * 100}%"></div></div>
-        <p class="chart-value">${stat.avgA.toFixed(2)}</p>
+        <p class="chart-value">${Math.round(stat.avgA / 5 * 100)}%</p>
       </div>
       <div class="chart-row">
         <p class="chart-label">${stat.labelB}</p>
         <div class="chart-track"><div class="chart-bar bar-alt" style="width:${(stat.avgB / 5) * 100}%"></div></div>
-        <p class="chart-value">${stat.avgB.toFixed(2)}</p>
+        <p class="chart-value">${Math.round(stat.avgB / 5 * 100)}%</p>
       </div>
       <div class="chart-row">
         <p class="chart-label">전체 평균</p>
         <div class="chart-track"><div class="chart-bar bar-total" style="width:${(stat.avgTotal / 5) * 100}%"></div></div>
-        <p class="chart-value">${stat.avgTotal.toFixed(2)}</p>
+        <p class="chart-value">${Math.round(stat.avgTotal / 5 * 100)}%</p>
       </div>
     </div>
   `;
@@ -159,9 +159,9 @@ function renderPieChart(stat) {
     <div class="pie-wrap">
       <div class="pie-chart" style="background: conic-gradient(#2563eb 0% ${aPercent}%, #16a34a ${aPercent}% 100%);"></div>
       <div class="pie-legend">
-        <p><span class="dot dot-a"></span>${stat.labelA}: ${stat.avgA.toFixed(2)}</p>
-        <p><span class="dot dot-b"></span>${stat.labelB}: ${stat.avgB.toFixed(2)}</p>
-        <p><span class="dot dot-c"></span>전체 평균: ${stat.avgTotal.toFixed(2)}</p>
+        <p><span class="dot dot-a"></span>${stat.labelA}: ${Math.round(stat.avgA / 5 * 100)}%</p>
+        <p><span class="dot dot-b"></span>${stat.labelB}: ${Math.round(stat.avgB / 5 * 100)}%</p>
+        <p><span class="dot dot-c"></span>전체 평균: ${Math.round(stat.avgTotal / 5 * 100)}%</p>
       </div>
     </div>
   `;
