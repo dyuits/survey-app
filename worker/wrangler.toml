@@ -1,0 +1,9 @@
+name = "survey-app-results"
+main = "src/index.js"
+compatibility_date = "2024-10-01"
+
+# 배포 전: npx wrangler kv namespace create SURVEY
+# 출력된 id를 아래 id에 붙여넣기
+[[kv_namespaces]]
+binding = "SURVEY"
+id = "4d9660e98012435bae77783c52eb339a"

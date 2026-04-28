@@ -6,9 +6,19 @@ const loginMessage = document.getElementById("loginMessage");
 const statsContent = document.getElementById("statsContent");
 const clearAllButton = document.getElementById("clearAllButton");
 const chartTypeSelect = document.getElementById("chartTypeSelect");
+const downloadCsvButton = document.getElementById("downloadCsvButton");
+const refreshStatsButton = document.getElementById("refreshStatsButton");
+const storageHint = document.getElementById("storageHint");
 let chartType = "bar";
 
-function tryLogin() {
+function setStorageHintText() {
+  if (!storageHint) return;
+  storageHint.textContent = hasRemoteApi()
+    ? "서버에 응답이 저장됩니다. 새로고침으로 최신 통계를 불러올 수 있습니다. 이 브라우저에만 남아 있던 예전 제출은, 이 페이지에 들어올 때 자동으로 서버로 옮깁니다(아직 데이터를 지우지 않았다면)."
+    : "지금은 이 브라우저에만 응답이 쌓입니다. 학생·교사·학부모 기기 응답을 관리자에서 보려면 api-config.js의 SURVEY_API_BASE에 공통 API 주소를 넣고 GitHub Pages에 반영하세요. (저장소의 worker 폴더 참고)";
+}
+
+async function tryLogin() {
   const value = passwordInput.value.trim();
   if (value !== ADMIN_PASSWORD) {
     loginMessage.textContent = "비밀번호가 올바르지 않습니다.";
@@ -17,7 +27,9 @@ function tryLogin() {
   loginMessage.textContent = "";
   loginSection.classList.add("hidden");
   dashboardSection.classList.remove("hidden");
-  renderStats();
+  setStorageHintText();
+  await migrateLocalResultsToRemote();
+  await renderStats();
 }
 
 function calcAverage(entries, questionIds) {
@@ -51,8 +63,7 @@ function makeRoleStats(roleId, allResults) {
   };
 }
 
-function renderStats() {
-  const allResults = loadResults();
+function paintStats(allResults) {
   statsContent.innerHTML = "";
 
   const totalBox = document.createElement("div");
@@ -106,6 +117,19 @@ function renderStats() {
   statsContent.appendChild(volumeCard);
 }
 
+async function renderStats() {
+  statsContent.innerHTML = `<p class="subtext">통계를 불러오는 중…</p>`;
+  let allResults;
+  try {
+    allResults = await fetchResults();
+  } catch {
+    statsContent.innerHTML = `<p class="subtext">불러오기에 실패했습니다. 네트워크와 API 주소를 확인한 뒤 새로고침 해 주세요.</p>`;
+    return;
+  }
+  if (!Array.isArray(allResults)) allResults = [];
+  paintStats(allResults);
+}
+
 function renderBarChart(stat) {
   return `
     <div class="chart-block">
@@ -143,20 +167,63 @@ function renderPieChart(stat) {
   `;
 }
 
-function clearAllStats() {
+async function clearAllStats() {
   if (!confirm("저장된 설문 결과를 모두 삭제할까요?")) return;
-  saveResults([]);
-  renderStats();
+  try {
+    await clearResults();
+  } catch {
+    alert("삭제 요청에 실패했습니다.");
+    return;
+  }
+  await renderStats();
 }
 
-loginButton.addEventListener("click", tryLogin);
+async function downloadCsv() {
+  let rows;
+  try {
+    rows = await fetchResults();
+  } catch {
+    alert("데이터를 불러오지 못했습니다.");
+    return;
+  }
+  if (!rows.length) {
+    alert("저장된 응답이 없습니다.");
+    return;
+  }
+  const csv = exportResultsToCsv(rows);
+  const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `survey-export-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+loginButton.addEventListener("click", () => {
+  tryLogin();
+});
 passwordInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") tryLogin();
 });
-clearAllButton.addEventListener("click", clearAllStats);
+clearAllButton.addEventListener("click", () => {
+  clearAllStats();
+});
 chartTypeSelect.addEventListener("change", () => {
   chartType = chartTypeSelect.value;
   if (!dashboardSection.classList.contains("hidden")) {
     renderStats();
   }
 });
+if (refreshStatsButton) {
+  refreshStatsButton.addEventListener("click", () => {
+    if (!dashboardSection.classList.contains("hidden")) {
+      renderStats();
+    }
+  });
+}
+if (downloadCsvButton) {
+  downloadCsvButton.addEventListener("click", () => {
+    downloadCsv();
+  });
+}

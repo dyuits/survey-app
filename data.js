@@ -1,9 +1,16 @@
 const STORAGE_KEY = "school-survey-results-v2";
 const ADMIN_PASSWORD = "0001";
-const API_BASE =
+
+function normalizeApiBase(raw) {
+  if (raw == null || typeof raw !== "string") return "";
+  return raw.trim().replace(/\/+$/, "");
+}
+
+const API_BASE = normalizeApiBase(
   (typeof window !== "undefined" && window.SURVEY_API_BASE) ||
-  (typeof localStorage !== "undefined" && localStorage.getItem("survey-api-base")) ||
-  "";
+    (typeof localStorage !== "undefined" && localStorage.getItem("survey-api-base")) ||
+    ""
+);
 
 const SCALE_LABEL = "리커트 5점 척도: 매우 그렇지 않다(1) ~ 매우 그렇다(5)";
 
@@ -224,6 +231,48 @@ async function clearResults() {
     saveResults([]);
     return false;
   }
+}
+
+/**
+ * 이 브라우저 localStorage에만 남아 있는 예전 제출을 서버로 올립니다.
+ * 같은 기기·같은 브라우저로 설문/시작/관리자 페이지를 열면 자동 실행됩니다.
+ * (이미 지운 기기·시크릿 창 응답은 복구할 수 없습니다.)
+ */
+async function migrateLocalResultsToRemote() {
+  if (!hasRemoteApi()) return { ok: true, uploaded: 0, skipped: 0, failed: 0 };
+  const local = loadResults();
+  if (!local.length) return { ok: true, uploaded: 0, skipped: 0, failed: 0 };
+  const remaining = [];
+  let uploaded = 0;
+  let skipped = 0;
+  let failed = 0;
+  for (const row of local) {
+    try {
+      const response = await fetch(`${API_BASE}/results`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(row),
+      });
+      if (!response.ok) {
+        remaining.push(row);
+        failed++;
+        continue;
+      }
+      let info = {};
+      try {
+        info = await response.json();
+      } catch (_) {
+        /* 구버전 Worker 등 */
+      }
+      if (info.duplicate) skipped++;
+      else uploaded++;
+    } catch (_) {
+      remaining.push(row);
+      failed++;
+    }
+  }
+  saveResults(remaining);
+  return { ok: failed === 0, uploaded, skipped, failed, remaining: remaining.length };
 }
 
 function calcMean(values) {

@@ -32,17 +32,17 @@
               <option value="bar">막대 그래프</option>
               <option value="pie">원형 그래프</option>
             </select>
+            <button id="refreshStatsButton" class="ghost tool-btn" type="button">새로고침</button>
             <button id="downloadCsvButton" class="ghost tool-btn" type="button">CSV 다운로드</button>
             <button id="clearAllButton" class="danger" type="button">전체 통계 초기화</button>
           </div>
         </div>
-        <p class="subtext">
-          링크 배포 시 기본은 브라우저 임시 저장소로 동작하며, API를 연결하면 여러 기기 응답을 통합 집계할 수 있습니다.
-        </p>
+        <p id="storageHint" class="subtext"></p>
         <div id="statsContent"></div>
       </section>
     </main>
 
+    <script src="api-config.js"></script>
     <script src="data.js"></script>
     <script src="admin.js"></script>
   </body>

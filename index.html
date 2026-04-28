@@ -15,6 +15,10 @@
         <p class="subtext">
           아래 링크를 각각 배포하면 대상별 설문을 진행할 수 있고, 관리자 페이지에서 통계를 확인할 수 있습니다.
         </p>
+        <p class="subtext">
+          API(api-config.js)를 연결한 경우, 예전에 이 브라우저에만 저장된 제출은 이 시작 페이지·설문 링크·관리자 페이지를
+          <strong>같은 기기·같은 브라우저</strong>로 한 번 열면 서버로 자동 전송됩니다. (사이트 데이터를 지운 기기는 복구되지 않습니다.)
+        </p>
       </header>
 
       <section class="card">
@@ -32,5 +36,14 @@
         <a class="link-btn admin-link" href="admin.html">관리자 통계 페이지 열기</a>
       </section>
     </main>
+    <script src="api-config.js"></script>
+    <script src="data.js"></script>
+    <script>
+      (async function () {
+        try {
+          await migrateLocalResultsToRemote();
+        } catch (_) {}
+      })();
+    </script>
   </body>
 </html>

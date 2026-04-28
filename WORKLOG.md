@@ -33,24 +33,20 @@
 ## 보안/운영 메모
 - 관리자 페이지는 비밀번호 입력 후 접근 가능
 - 메인 화면에 비밀번호 숫자 직접 노출하지 않음
-- 현재 데이터 저장 방식:
-  - 브라우저 localStorage 기반
-  - 같은 브라우저/기기에서 제출한 데이터만 관리자 화면에 합산됨
-- 여러 기기 응답을 하나로 모으려면:
-  - Google Sheets / Firebase / Supabase 등 서버 저장소 연동 필요
-  - `window.SURVEY_API_BASE`를 설정하면 링크 배포에서도 통합 저장 가능
+- 데이터 저장 방식 (둘 중 하나):
+  - **`api-config.js`의 `SURVEY_API_BASE`가 비어 있음:** 브라우저 localStorage만 사용. 같은 기기에서만 관리자 통계에 보임.
+  - **API 주소를 넣음:** 제출·통계·CSV·초기화가 모두 해당 API(JSON `GET/POST/DELETE …/results`)를 사용해 여러 기기 응답이 한곳에 모임.
+- 저장소에 포함된 **Cloudflare Worker** (`worker/`): KV에 설문 배열을 저장하는 경량 API. 배포 절차:
+  1. Cloudflare 계정에서 Wrangler 로그인: `npx wrangler login`
+  2. KV 네임스페이스 생성: `cd worker && npx wrangler kv namespace create SURVEY`
+  3. 출력된 `id`를 `worker/wrangler.toml`의 `REPLACE_WITH_KV_NAMESPACE_ID` 자리에 붙여넣기
+  4. 배포: `npx wrangler deploy`
+  5. 배포된 Worker URL(예: `https://survey-app-results.xxx.workers.dev`)을 `api-config.js`의 `window.SURVEY_API_BASE`에 넣고(끝 슬래시 없음) GitHub에 푸시해 Pages에 반영
 
 ## 링크 배포(정적 호스팅) 가이드
 - 권장: GitHub Pages, Netlify, Vercel 중 정적 배포
-- 기본 동작:
-  - 서버 없이도 설문 제출/통계 확인 가능
-  - 단, 기기별 브라우저 저장소 기준이라 통합 집계는 되지 않음
-- 통합 집계가 필요하면:
-  - API를 별도 배포 후 각 페이지에 아래 설정 추가
-  - 예시:
-  ```html
-  <script>window.SURVEY_API_BASE = "https://your-api.example.com/api";</script>
-  ```
+- **여러 사람이 링크로 응답하고 관리자에서 합산하려면** 반드시 위 API(Worker 등)를 배포하고 `api-config.js`를 수정한 뒤 같은 저장소로 Pages를 갱신할 것.
+- API 없이 쓰는 경우: 데모·동일 PC 테스트용으로만 적합.
 
 ## 주요 수정 이력(요약)
 1. 초기 단일 설문 앱 생성
@@ -61,6 +57,8 @@
 6. 설문 섹션 제목 표기 개선:
    - 1. AI 디지털 리터러시 역량
    - 2. 사회정서 설문문항
+7. 통합 집계: `api-config.js` + `submitResult`/`fetchResults` 연동, 관리자 새로고침·CSV, Cloudflare Worker 샘플 추가
+8. 예전 로컬 전용 제출 복구: `migrateLocalResultsToRemote()` — 시작/설문/관리자 페이지 방문 시 같은 브라우저에 남은 응답을 API로 전송. Worker는 동일 지문 중복 저장 방지
 
 ## 저장소
 - GitHub: https://github.com/dyuits/survey-app

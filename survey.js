@@ -109,23 +109,36 @@ function updateProgress() {
   progressBar.style.width = `${percent}%`;
 }
 
-function submitSurvey() {
+async function submitSurvey() {
   const missed = questions.filter((q) => !responses[q.id]);
   if (missed.length > 0) {
     alert(`미응답 문항 ${missed.length}개가 있습니다. 모든 문항에 응답해 주세요.`);
     return;
   }
 
-  const results = loadResults();
-  results.push({
+  const payload = {
     role: roleId,
     submittedAt: new Date().toISOString(),
     responses: { ...responses },
-  });
-  saveResults(results);
+  };
 
-  alert("설문이 제출되었습니다. 감사합니다.");
-  window.location.reload();
+  const useRemote = hasRemoteApi();
+  submitButton.disabled = true;
+  try {
+    const remoteOk = await submitResult(payload);
+    if (useRemote && !remoteOk) {
+      alert(
+        "서버에 저장하지 못해 이 기기에만 저장되었습니다. 네트워크를 확인한 뒤 다시 제출해 주세요."
+      );
+    } else {
+      alert("설문이 제출되었습니다. 감사합니다.");
+    }
+    window.location.reload();
+  } catch (e) {
+    alert("제출 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
+  } finally {
+    submitButton.disabled = false;
+  }
 }
 
 function resetForm() {
@@ -137,3 +150,8 @@ function resetForm() {
 submitButton.addEventListener("click", submitSurvey);
 resetButton.addEventListener("click", resetForm);
 initPage();
+(async function syncLegacyLocalSubmissions() {
+  try {
+    await migrateLocalResultsToRemote();
+  } catch (_) {}
+})();
